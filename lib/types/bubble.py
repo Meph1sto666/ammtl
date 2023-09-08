@@ -12,11 +12,11 @@ class Bubble:
 		self.keyPoints:list[cv2.Mat] = []
 		self.mocr:manga_ocr.MangaOcr = mocr
 		self.hasContent:bool = self.checkForContent()
-		self.text = ""
+		self.text:str = ""
 		
 		self.translation:str|None = None
 		
-	def translate(self) -> None:
+	def translate(self) -> str|None:
 		if self.hasContent:
 			Image.fromarray(self.img).save(f"./out/p_{self.area}.jpg", optimize=True) # type: ignore
 			self.text:str = self.mocr(Image.fromarray(self.img)) # type: ignore
@@ -26,7 +26,7 @@ class Bubble:
 		
 	def checkForContent(self) -> bool:
 		blurred:cv2.Mat = cv2.GaussianBlur(self.img, (3,3), 1) # type: ignore // sigma 0, 1 or 2
-		keypoints = cv2.AgastFeatureDetector_create(
+		keypoints = cv2.AgastFeatureDetector_create( # type: ignore
 			threshold=120,
 			nonmaxSuppression=False,
 			type=cv2.AGAST_FEATURE_DETECTOR_OAST_9_16
@@ -35,5 +35,5 @@ class Bubble:
 		blurred = cv2.drawKeypoints(blurred,keypoints, None, color=(0,255,0)) # type: ignore
 		Image.fromarray(blurred).save(f"./out/p_{self.area}.jpg") # type: ignore
 		# return self.area/len(keypoints) < 150 if len(keypoints) > 0 else False
-		return self.area/len(keypoints) < 100 if len(keypoints) > 0 else False
+		return self.area/len(keypoints) < 100 if len(keypoints) > 0 else False # type: ignore
 		return True

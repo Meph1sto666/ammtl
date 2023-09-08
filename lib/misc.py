@@ -1,3 +1,4 @@
+import random
 import cv2
 
 class CropBox:
@@ -30,7 +31,8 @@ def drawBoundingBox(image:cv2.Mat,x:int,y:int,w:int,h:int,text:str|None=None, in
 	Returns:
 		cv2.Mat: Image with drawn boxes
 	"""
-	cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2) # type: ignore
+	color:tuple[int,...] = (random.randint(1,256),random.randint(1,256),random.randint(1,256))
+	cv2.rectangle(image, (x, y), (x + w, y + h), color, 2) # type: ignore
 	if text != None:
-		cv2.putText(image, text, (x if not inset else x+5, (y - 10) if not inset else (y + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA) # type: ignore
+		cv2.putText(image, text, (x if not inset else x+5, (y - 10) if not inset else (y + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2, cv2.LINE_AA) # type: ignore
 	return image
