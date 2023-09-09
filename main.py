@@ -9,7 +9,8 @@ from lib.types.page import Page
 mocr = None
 
 for f in os.listdir("./tests/"):
-    print(f)
+    print(f, end=" ")
     p = Page(cv2.imread(f"./tests/{f}"), mocr) # type: ignore
+    print(f"t={p.tDelta}ms")
     Image.fromarray(p.img).save(f"./out/{f}") # type: ignore
     Image.fromarray(p.mask).save(f"./out/mask_{f}") # type: ignore

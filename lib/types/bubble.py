@@ -25,6 +25,7 @@ class Bubble:
 			print(self.text)
 		
 	def checkForContent(self) -> bool:
+		return True
 		blurred:cv2.Mat = cv2.GaussianBlur(self.img, (3,3), 1) # type: ignore // sigma 0, 1 or 2
 		keypoints = cv2.AgastFeatureDetector_create( # type: ignore
 			threshold=120,
@@ -36,4 +37,3 @@ class Bubble:
 		Image.fromarray(blurred).save(f"./out/p_{self.area}.jpg") # type: ignore
 		# return self.area/len(keypoints) < 150 if len(keypoints) > 0 else False
 		return self.area/len(keypoints) < 100 if len(keypoints) > 0 else False # type: ignore
-		return True

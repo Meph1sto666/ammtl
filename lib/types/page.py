@@ -4,6 +4,7 @@ from sklearn.cluster import DBSCAN
 from lib.types.bubble import Bubble
 from datetime import datetime as dt
 from lib.misc import CropBox, drawBoundingBox
+import cv2.typing
 import manga_ocr # type: ignore
 
 class Page:
@@ -20,7 +21,7 @@ class Page:
 		end:dt = dt.now()
 		self.img = self.drawTextBounds(self.img)
 		# Image.fromarray(self.img).show()
-		print(f"{(end-start).total_seconds()}s")
+		self.tDelta:float = (end-start).total_seconds()*1000
 
 	def createMask(self) -> cv2.Mat:
 		threshed:cv2.Mat = cv2.threshold(cv2.GaussianBlur(self.img, (9,9), 5), 200, 255, cv2.THRESH_BINARY)[1] # type: ignore // reduced threshold less black
@@ -28,6 +29,69 @@ class Page:
 		return cv2.bitwise_not(cv2.cvtColor(morphed, cv2.COLOR_BGR2GRAY)) # type: ignore
 
 	def conjectBubbles(self) -> list[Bubble]:
+		bbs:list[Bubble] = []
+		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+		gray = cv2.bitwise_and(gray, self.mask)
+		blurred:cv2.Mat = cv2.GaussianBlur(gray, (3,3), 15) # type: ignore // sigma 0, 1 or 2
+		threshed:cv2.Mat = cv2.threshold(blurred, 230, 255, cv2.THRESH_BINARY)[1] # type: ignore
+		blurred2:cv2.Mat = cv2.GaussianBlur(threshed, (3,3), 2) # type: ignore // sigma 0, 1 or 2
+
+		self.img=cv2.cvtColor(blurred2, cv2.COLOR_GRAY2BGR)
+
+		keypoints = cv2.AgastFeatureDetector_create( # type: ignore
+			threshold=100,
+			nonmaxSuppression=True,
+			type=cv2.AGAST_FEATURE_DETECTOR_OAST_9_16 # type: ignore
+		).detect(blurred2)
+		
+
+		locations = np.array([kp.pt for kp in keypoints])
+
+		# Perform DBSCAN clustering
+		dbscan = DBSCAN(eps=30, min_samples=10)  # Set the desired epsilon and minimum samples
+		dbscan.fit(locations)
+
+		labels:cv2.Mat = dbscan.labels_
+
+		unique_labels = np.unique(labels)
+
+		for label in unique_labels:
+			if label == -1:  # Noise points
+				continue
+
+			# Get the keypoints belonging to the current cluster
+			cluster_keypoints = [kp for i, kp in enumerate(keypoints) if labels[i] == label]
+			if len(cluster_keypoints) < 3: continue
+
+			x, y, w, h = cv2.boundingRect(np.array([kp.pt for kp in cluster_keypoints]).astype(np.int32))
+
+			# Draw the elliptical boundary
+			cv2.ellipse(self.img, (int(x + w / 2), int(y + h / 2)), (int(w / 2), int(h / 2)), 0, 0, 360, (0, 255, 0), 2)
+
+
+
+
+		# for label in np.unique(labels): # type: ignore
+		# 	if label == -1: continue
+		# 	clusterPoints:cv2.Mat = np.array([(kp.pt[0], kp.pt[1]) for i, kp in enumerate(keypoints) if labels[i] == label]).astype(np.int32) # type: ignore
+			
+			
+		# 	if len(clusterPoints) < 3: continue
+		# 	br:tuple[int,...] = cv2.boundingRect(clusterPoints) # type: ignore
+		# 	if not 0.075*self.area > br[2]*br[3] > 0.0005*self.area: continue
+		# 	bbs.append(Bubble(self.img, CropBox(*br, tolerance=20), self.mocr))		
+		# self.img = cv2.drawKeypoints(self.img, keypoints, None, (255,0,255))
+
+		# contours:list[cv2.Mat] = cv2.findContours(threshed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
+		# for contour in contours:
+		# 	area:float = cv2.contourArea(contour)
+		# 	length:float = cv2.arcLength(contour, True)
+		# 	if length > self.img.shape[1]: continue
+		# 	if not self.area*.00003 < area < self.area*.25: continue
+		# 	cv2.drawContours(self.img, [contour], -1, (0,255,255), 2)
+		return bbs
+
+	def conjectBubblesByBlobs(self) -> list[Bubble]:
 		bbs:list[Bubble] = []
 		# mask:cv2.Mat = np.zeros((self.img.shape[0],self.img.shape[1]), dtype=np.uint8)
 		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
