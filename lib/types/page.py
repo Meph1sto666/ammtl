@@ -1,3 +1,4 @@
+import random # type: ignore
 import cv2
 import numpy as np
 from sklearn.cluster import DBSCAN
@@ -6,7 +7,7 @@ from datetime import datetime as dt
 from lib.misc import CropBox, drawBoundingBox
 import cv2.typing
 import manga_ocr # type: ignore
-from PIL import Image
+from PIL import Image # type: ignore
 
 class Page:
 	def __init__(self, img:cv2.Mat, mocr:manga_ocr.MangaOcr) -> None:
@@ -14,51 +15,76 @@ class Page:
 		self.img:cv2.Mat = img
 		self.area:int = img.shape[0]*img.shape[1]
 		start:dt = dt.now()
-		self.mask:cv2.Mat = self.createMask()
+		self.mask:cv2.Mat = self.createMask(cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)) # type: ignore
 		self.bubbles:list[Bubble] = self.conjectBubbles()
 		self.bubbles = [b for b in self.bubbles if b.hasContent]
 		# for b in self.bubbles:
 		# 	b.translate()
 		end:dt = dt.now()
 		self.img = self.drawTextBounds(self.img)
-		# Image.fromarray(self.img).show()
 		self.tDelta:float = (end-start).total_seconds()*1000
 
-	def createMask(self) -> cv2.Mat:
-		# threshed:cv2.Mat = cv2.threshold(cv2.GaussianBlur(self.img, (9,9), 5), 200, 255, cv2.THRESH_BINARY)[1] # type: ignore // reduced threshold less black
-		threshed:cv2.Mat = cv2.threshold(cv2.cvtColor(cv2.medianBlur(self.img, 5), cv2.COLOR_BGR2GRAY), 200, 255, cv2.THRESH_BINARY)[1] # type: ignore // reduced threshold less black
-		morphed:cv2.Mat = cv2.morphologyEx(threshed, cv2.MORPH_RECT, cv2.getStructuringElement(cv2.MORPH_RECT,(9,9))) # type: ignore // (9,9) < -> less thick > -> thicker
-		contours:list[cv2.Mat] = cv2.findContours(threshed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
-		filtered_contours:list[cv2.Mat] = [contour for contour in contours if cv2.contourArea(contour) > 15000 and cv2.mean(morphed, mask=cv2.bitwise_not(morphed))[0] == 0]
+	def createMask(self, img:cv2.Mat) -> cv2.Mat:
+		threshed:cv2.Mat = cv2.threshold(cv2.medianBlur(img, 5), 200, 255, cv2.THRESH_BINARY)[1] # type: ignore // reduced threshold less black
+		morphed:cv2.Mat = cv2.morphologyEx(threshed, cv2.MORPH_RECT, cv2.getStructuringElement(cv2.MORPH_RECT,(7,7))) # type: ignore // (9,9) < -> less thick > -> thicker
+		contours:list[cv2.Mat] = cv2.findContours(threshed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
+		filteredContours:list[cv2.Mat] = [contour for contour in contours if cv2.contourArea(contour) > 15000 and cv2.mean(morphed, mask=cv2.bitwise_not(morphed))[0] == 0]
 		mask:cv2.Mat = np.zeros_like(morphed)
-		cv2.drawContours(mask, filtered_contours, -1, 1, thickness=cv2.FILLED)
+		cv2.drawContours(mask, filteredContours, -1, 1, thickness=cv2.FILLED) # type: ignore
 		morphed = cv2.bitwise_not(morphed) # type: ignore
-		return cv2.bitwise_and(morphed, morphed, mask=mask)
+		return cv2.bitwise_and(morphed, morphed, mask=mask) # type: ignore
 
 	def conjectBubbles(self) -> list[Bubble]:
 		bbs:list[Bubble] = []
 		gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
 		gray = cv2.bitwise_and(gray, self.mask)
 		
-		blurred:cv2.Mat = cv2.GaussianBlur(gray, (3,3), 15) # type: ignore // sigma 0, 1 or 2
+		blurred:cv2.Mat = cv2.medianBlur(gray, 3) # type: ignore
 		threshed:cv2.Mat = cv2.threshold(blurred, 200, 255, cv2.THRESH_BINARY)[1] # type: ignore
-		blurred2:cv2.Mat = cv2.GaussianBlur(threshed, (3,3), 15) # type: ignore // sigma 0, 1 or 2
 
-		contours:list[cv2.Mat] = cv2.findContours(blurred2, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)[0]
-		self.img=cv2.cvtColor(blurred2, cv2.COLOR_GRAY2BGR)
-		for contour in contours:
-			if len(contour) <= 0: continue
-			perimeter = cv2.arcLength(contour, True)
-			color:tuple[int,int,int] = (0,255,255) if perimeter < 550 else (255,0,255)
-			if perimeter > 550: continue
-			area:float = cv2.contourArea(contour)
-			length:float = cv2.arcLength(contour, True)
-			if length > self.img.shape[1]*.75: continue
+		contours:list[cv2.Mat] = cv2.findContours(threshed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
+		self.img=cv2.cvtColor(threshed, cv2.COLOR_GRAY2BGR) # type: ignore		
+		filtered:list[cv2.Mat] = []
+		for c in range(len(contours)):
+			if len(contours[c]) <= 0: continue
+			perimeter = cv2.arcLength(contours[c], True)
+			# color:tuple[int,int,int] = (0,255,255) if perimeter < 550 else (255,0,255)
+			# color:tuple[int,int,int] = (random.randint(1,256),random.randint(1,256),random.randint(1,256))
+			if perimeter > self.img.shape[1]*.42: continue
+			area:float = cv2.contourArea(contours[c])
 			if not self.area*.00003 < area < self.area*.005: continue
-			
-			
-			cv2.drawContours(self.img, [contour], -1, color, 2)
+			# approx = cv2.approxPolyDP(contours[c], 0.01 * cv2.arcLength(contours[c], True), True)
+
+			# color:tuple[int,int,int] = (0,255,255) if len(approx) < 20 else (255,0,255)
+
+			# if len(approx) !=12: continue
+			# if (abs(len(contours[c])-len(contours[c-1])) > 5 and abs(len(contours[c])-len(contours[c+1])) > 5) if c+1<len(contours) else False: continue 
+			# cv2.drawContours(self.img, [contours[c]], -1, color, 2)
+			filtered.append(contours[c])
+		a = 255/ len(filtered)
+		for c in range(len(filtered)):
+			color:tuple[int,int,int] = (0,255,a*c) if c%2==0 else (255,0,a*c)
+			drawBoundingBox(self.img, *cv2.boundingRect(filtered[c]), text=str(c), color=color)
+		self.cluster(filtered)
 		return bbs
+
+	def cluster(self, contours:list[cv2.Mat]) -> list[cv2.Mat]:
+		clusters:dict[int, list[tuple[float, int, int]]] = {}
+		c:int = 0
+		for i in range(len(contours)-1):
+			M1 = cv2.moments(contours[i])
+			cX1 = int(M1['m10'] / M1['m00'])
+			cY1 = int(M1['m01'] / M1['m00'])
+			M2 = cv2.moments(contours[i+1])
+			cX2 = int(M2['m10'] / M2['m00'])
+			cY2 = int(M2['m01'] / M2['m00'])
+			distance = ((cX2 - cX1)**2 + (cY2 - cY1)**2)**0.5
+			if distance > 100: c+=1
+			try: clusters[c].append((distance, i, i+1))
+			except: clusters[c] = [(distance, i, i+1)]
+		for sc in clusters.items():
+			print(sc)
+
 
 	def conjectBubblesByBlobs(self) -> list[Bubble]:
 		bbs:list[Bubble] = []
@@ -67,7 +93,7 @@ class Page:
 		gray = cv2.bitwise_and(gray, self.mask)
 		blurred:cv2.Mat = cv2.GaussianBlur(gray, (3,3), 2) # type: ignore // sigma 0, 1 or 2
 		threshed:cv2.Mat = cv2.threshold(blurred, 150, 255, cv2.THRESH_BINARY)[1] # type: ignore
-		blurred2:cv2.Mat = cv2.GaussianBlur(threshed, (3,3), 1) # type: ignore // sigma 0, 1 or 2
+		blurred2:cv2.Mat = cv2.GaussianBlur(threshed, (3,3), 2) # type: ignore // sigma 0, 1 or 2
 		self.img=blurred2
 		keypoints = cv2.AgastFeatureDetector_create( # type: ignore
 			threshold=64,
@@ -108,7 +134,7 @@ class Page:
 			bbs.append(Bubble(self.img, CropBox(*br, tolerance=20), self.mocr))
 
 			# cv2.rectangle(mask, (br[0]-20, br[1]-20), (br[0] + br[2]+40, br[1] + br[3]+40), (255), -1) # type: ignore
-		self.img = cv2.drawKeypoints(self.img, keypoints, None, (255,0,255))
+		self.img = cv2.drawKeypoints(self.img, keypoints, None, (255,0,255)) # type: ignore
 		return bbs
 
 	def drawTextBounds(self, img:cv2.Mat) -> cv2.Mat:

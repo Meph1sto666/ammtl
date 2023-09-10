@@ -16,7 +16,7 @@ class CropBox:
 	def toTuple(self, tolerance:int=0) -> tuple[int, int, int, int]:
 		return (self.x-tolerance, self.y-tolerance, self.w+tolerance*2, self.h+tolerance*2)
 
-def drawBoundingBox(image:cv2.Mat,x:int,y:int,w:int,h:int,text:str|None=None, inset:bool=False) -> cv2.Mat:
+def drawBoundingBox(image:cv2.Mat,x:int,y:int,w:int,h:int,text:str|None=None, inset:bool=False, color:tuple[int,int,int]=(0,255,0)) -> cv2.Mat:
 	"""Draws a bounding box in an image
 
 	Args:
@@ -31,7 +31,7 @@ def drawBoundingBox(image:cv2.Mat,x:int,y:int,w:int,h:int,text:str|None=None, in
 	Returns:
 		cv2.Mat: Image with drawn boxes
 	"""
-	color:tuple[int,...] = (random.randint(1,256),random.randint(1,256),random.randint(1,256))
+	# color:tuple[int,...] = (random.randint(1,256),random.randint(1,256),random.randint(1,256))
 	cv2.rectangle(image, (x, y), (x + w, y + h), color, 2) # type: ignore
 	if text != None:
 		cv2.putText(image, text, (x if not inset else x+5, (y - 10) if not inset else (y + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2, cv2.LINE_AA) # type: ignore
