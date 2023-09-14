@@ -1,13 +1,9 @@
-import io
-import json
 import os
 import pstats
 import cv2
-from PIL import Image
-from lib.misc import timeToColorPrec
+from PIL import Image # type: ignore
 from lib.types.page import Page
 from lib.types.preset import Preset
-import colorama
 # import pytesseract
 # tsr = pytesseract.pytesseract.tesseract_cmd = "./dep/Tesseract-OCR/tesseract.exe"
 # import manga_ocr
@@ -18,7 +14,7 @@ import cProfile
 profiler = cProfile.Profile()
 profiler.enable()
 for f in os.listdir("./tests/")[0:]:
-	p = Page(cv2.imread(f"./tests/{f}"), mocr, Preset(), f) # type: ignore
+	p = Page(cv2.imread(f"./tests/{f}"), mocr, Preset()) # type: ignore
 	# diff = p.tTracker.diff()
 	# dStr = f"{colorama.Back.RESET+f.ljust(10)}{colorama.Back.RESET}: {(colorama.Fore.RESET+' / ').join([timeToColorPrec(diff[d])+str(d)+' ['+str(round(diff[d],2)).split('.')[0].rjust(4)+'.'+str(round(diff[d],2)).split('.')[1].ljust(2)+']' for d in diff])}"
 	# print(dStr)

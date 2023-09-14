@@ -11,7 +11,7 @@ from PIL import Image # type: ignore
 from lib.types.preset import Preset
 
 class Page:
-	def __init__(self, img:cv2.typing.MatLike, mocr:manga_ocr.MangaOcr, preset:Preset, f:str) -> None:
+	def __init__(self, img:cv2.typing.MatLike, mocr:manga_ocr.MangaOcr, preset:Preset) -> None:
 		self.preset:Preset = preset
 		self.mocr:manga_ocr.MangaOcr = mocr
 		self.img:cv2.typing.MatLike = img
@@ -20,16 +20,17 @@ class Page:
 		self.area:int = img.shape[0]*img.shape[1]
 		self.width:int = img.shape[1]
 		self.height:int = img.shape[0]
-		self.mask:cv2.typing.MatLike = self.createMask(self.__gray__)
+		self.mask:cv2.typing.MatLike = self.createMask()
 		self.bubbles:list[Bubble] = self.conjectBubbles()
-		self.bubbles = [b for b in self.bubbles if b.hasContent]
+		# self.bubbles = [b for b in self.bubbles if b.hasContent]
+
 		# for b in range(len(self.bubbles)):
 		# 	Image.fromarray(self.bubbles[b].img).save(f"./out/b/{f}_{b}.jpg")
 		# 	b.translate()
 		# self.out = self.drawTextBounds(self.out)
 
-	def createMask(self, img:cv2.typing.MatLike) -> cv2.typing.MatLike:
-		blurred = cv2.medianBlur(img, self.preset.maskBlur)
+	def createMask(self) -> cv2.typing.MatLike:
+		blurred = cv2.medianBlur(self.__gray__, self.preset.maskBlur)
 		threshed:cv2.typing.MatLike = cv2.threshold(blurred, self.preset.maskThresh, 255, cv2.THRESH_BINARY)[1] # // reduced threshold less black
 		morphed:cv2.typing.MatLike = cv2.morphologyEx(threshed, cv2.MORPH_RECT, cv2.getStructuringElement(cv2.MORPH_RECT,self.preset.maskMorph)) # // (9,9) < -> less thick > -> thicker
 		contours:list[cv2.typing.MatLike] = cv2.findContours(morphed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
@@ -39,7 +40,6 @@ class Page:
 		cv2.drawContours(mask, filteredContours, -1, 1, thickness=cv2.FILLED) # type: ignore
 		morphed = cv2.bitwise_not(morphed) # type: ignore
 		return cv2.bitwise_and(morphed, morphed, mask=mask)
-
 	def conjectBubbles(self) -> list[Bubble]:
 		bbs:list[Bubble] = []
 		gray:cv2.typing.MatLike = self.__gray__
@@ -76,6 +76,12 @@ class Page:
 			if not self.area*self.preset.conjectionClusterMinArea < bubbleBounds[2]*bubbleBounds[3] < self.area*self.preset.conjectionClusterMaxArea: continue
 			bbs.append(Bubble(self.img, CropBox(*bubbleBounds,tolerance=self.preset.conjectionBubbleTolerance), self.mocr, preset=self.preset))
 		return bbs
+
+	def update(self, preset:Preset|None=None) -> None:
+		if preset != None:
+			self.preset = preset
+		self.mask = self.createMask()
+		self.bubbles = self.conjectBubbles()
 
 	def drawTextBounds(self, img:cv2.typing.MatLike) -> cv2.typing.MatLike:
 		for b in self.bubbles:

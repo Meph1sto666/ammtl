@@ -1,6 +1,6 @@
 import cv2
 import cv2.typing
-import deep_translator
+import deep_translator # type: ignore
 import numpy as np # type: ignore
 from lib.misc import CropBox
 from PIL import Image
@@ -39,7 +39,7 @@ class Bubble:
 		# agast.create(100,False,cv2.AGAST_FEATURE_DETECTOR_OAST_9_16)
 		# points = agast.detect(morphed)
 		# cMorphed = cv2.drawKeypoints(cMorphed,points)
-		Image.fromarray(cMorphed).save(f"./out/b/m/{self.area}.jpg")
+		Image.fromarray(cMorphed).save(f"./out/b/m/{self.area}.jpg") # type: ignore
 		# filteredContours:list[cv2.typing.MatLike] = [contour for contour in contours if cv2.contourArea(contour) > self.preset.maskContourFilterMaxArea*self.area and cv2.mean(morphed, mask=cv2.bitwise_not(morphed))[0] == 0]
 		# mask:cv2.typing.MatLike = np.zeros_like(morphed)
 		# cv2.drawContours(mask, filteredContours, -1, 1, thickness=cv2.FILLED) # type: ignore

@@ -1,4 +1,3 @@
-from typing import Type
 import colorama
 import cv2
 import cv2.typing
@@ -11,10 +10,10 @@ class Delta:
 		self.description:str|None = description
 		self.group = group
 
-	def __sub__(self, other) -> timedelta:
+	def __sub__(self, other) -> timedelta: # type: ignore
 		if isinstance(other, Delta):
 			return (self.TIME-other.TIME)
-		else: raise TypeError("Unsupported operand type: {}".format(type(other)))
+		else: raise TypeError("Unsupported operand type: {}".format(type(other))) # type: ignore
 
 class TimeTracker:
 	def __init__(self, startTime:dt) -> None:
