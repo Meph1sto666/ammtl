@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from sklearn.cluster import DBSCAN
 from lib.types.bubble import Bubble
-from datetime import datetime as dt
+# from datetime import datetime as dt
 from lib.misc import CropBox, drawBoundingBox
 import cv2.typing
 import manga_ocr # type: ignore
@@ -15,26 +15,26 @@ class Page:
 		self.preset:Preset = preset
 		self.mocr:manga_ocr.MangaOcr = mocr
 		self.img:cv2.typing.MatLike = img
+		self.__gray__:cv2.typing.MatLike = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY) if len(self.img.shape) > 2 else self.img
 		self.out:cv2.typing.MatLike = img.copy()
 		self.area:int = img.shape[0]*img.shape[1]
 		self.width:int = img.shape[1]
 		self.height:int = img.shape[0]
-		start:dt = dt.now()
-		self.mask:cv2.typing.MatLike = self.createMask(cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY) if len(self.img.shape) > 2 else self.img)
+		self.mask:cv2.typing.MatLike = self.createMask(self.__gray__)
 		self.bubbles:list[Bubble] = self.conjectBubbles()
 		self.bubbles = [b for b in self.bubbles if b.hasContent]
-		for b in range(len(self.bubbles)):
-			Image.fromarray(self.bubbles[b].img).save(f"./out/b/{f}_{b}.jpg")
+		# for b in range(len(self.bubbles)):
+		# 	Image.fromarray(self.bubbles[b].img).save(f"./out/b/{f}_{b}.jpg")
 		# 	b.translate()
-		end:dt = dt.now()
-		self.img = self.drawTextBounds(self.img)
-		self.tDelta:float = (end-start).total_seconds()*1000
+		# self.out = self.drawTextBounds(self.out)
 
 	def createMask(self, img:cv2.typing.MatLike) -> cv2.typing.MatLike:
-		threshed:cv2.typing.MatLike = cv2.threshold(cv2.medianBlur(img, self.preset.maskBlur), self.preset.maskThresh, 255, cv2.THRESH_BINARY)[1] # // reduced threshold less black
+		blurred = cv2.medianBlur(img, self.preset.maskBlur)
+		threshed:cv2.typing.MatLike = cv2.threshold(blurred, self.preset.maskThresh, 255, cv2.THRESH_BINARY)[1] # // reduced threshold less black
 		morphed:cv2.typing.MatLike = cv2.morphologyEx(threshed, cv2.MORPH_RECT, cv2.getStructuringElement(cv2.MORPH_RECT,self.preset.maskMorph)) # // (9,9) < -> less thick > -> thicker
-		contours:list[cv2.typing.MatLike] = cv2.findContours(threshed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
-		filteredContours:list[cv2.typing.MatLike] = [contour for contour in contours if cv2.contourArea(contour) > self.preset.maskContourFilterMaxArea*self.area and cv2.mean(morphed, mask=cv2.bitwise_not(morphed))[0] == 0]
+		contours:list[cv2.typing.MatLike] = cv2.findContours(morphed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
+		meanS:float = cv2.mean(morphed, mask=cv2.bitwise_not(morphed))[0]
+		filteredContours:list[cv2.typing.MatLike] = [contour for contour in contours if cv2.contourArea(contour) > self.preset.maskContourFilterMaxArea*self.area and meanS == 0]
 		mask:cv2.typing.MatLike = np.zeros_like(morphed)
 		cv2.drawContours(mask, filteredContours, -1, 1, thickness=cv2.FILLED) # type: ignore
 		morphed = cv2.bitwise_not(morphed) # type: ignore
@@ -42,12 +42,11 @@ class Page:
 
 	def conjectBubbles(self) -> list[Bubble]:
 		bbs:list[Bubble] = []
-		gray:cv2.typing.MatLike = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY) if len(self.img.shape) > 2 else self.img
+		gray:cv2.typing.MatLike = self.__gray__
 		gray = cv2.bitwise_and(gray, self.mask)
 		blurred:cv2.typing.MatLike = cv2.medianBlur(gray, self.preset.conjectionBlur)
 		threshed:cv2.typing.MatLike = cv2.threshold(blurred, self.preset.conjectionThresh, 255, cv2.THRESH_BINARY)[1]
 		contours:list[cv2.typing.MatLike] = cv2.findContours(threshed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
-		# self.img=cv2.cvtColor(threshed, cv2.COLOR_GRAY2BGR)
 		filtered:list[cv2.typing.MatLike] = []
 		for c in range(len(contours)):
 			if len(contours[c]) <= self.preset.conjectionMinContourLen: continue
@@ -69,8 +68,8 @@ class Page:
 			clusterI = np.where(labels==l)[0] # type: ignore
 			ccf:list[int] = [contourFeatures[i][0] for i in clusterI]
 			clustered:list[cv2.typing.MatLike] = [filtered[i] for i in ccf]
-			for c in clustered:
-				cv2.drawContours(self.out, [c], -1, color=(255,0,255), thickness=2)
+			# for c in clustered:
+			# 	cv2.drawContours(self.out, [c], -1, color=(255,0,255), thickness=2)
 			brs:list[cv2.typing.Rect] = [cv2.boundingRect(c) for c in clustered]
 			crds:list[list[int]] = [[i[e]+i[e-2] if e > 1 else i[e] for i in brs] for e in range(len(brs[0]))]
 			bubbleBounds:cv2.typing.Rect = [min(crds[0]), min(crds[1]), max(crds[2])-min(crds[0]), max(crds[3])-min(crds[1])]

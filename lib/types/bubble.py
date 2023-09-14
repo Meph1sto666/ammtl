@@ -14,7 +14,8 @@ class Bubble:
 		self.preset:Preset = preset
 		self.mocr:manga_ocr.MangaOcr = mocr
 		self.area:int = box.w*box.h
-		self.mask:cv2.typing.MatLike = self.createMask(cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY) if len(self.img.shape) > 2 else self.img)
+		# self.mask
+		# self.mask:cv2.typing.MatLike = self.createMask(cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY) if len(self.img.shape) > 2 else self.img)
 		self.hasContent:bool = self.checkForContent()
 		# self.keyPoints:list[cv2.typing.MatLike] = []
 		# self.text:str = ""
