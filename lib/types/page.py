@@ -6,14 +6,14 @@ from lib.types.bubble import Bubble
 # from datetime import datetime as dt
 from lib.misc import CropBox, drawBoundingBox
 import cv2.typing
-import manga_ocr # type: ignore
+# import manga_ocr # type: ignore
 from PIL import Image # type: ignore
 from lib.types.preset import Preset
 
 class Page:
-	def __init__(self, img:cv2.typing.MatLike, mocr:manga_ocr.MangaOcr, preset:Preset) -> None:
+	def __init__(self, img:cv2.typing.MatLike, mocr, preset:Preset) -> None:
 		self.preset:Preset = preset
-		self.mocr:manga_ocr.MangaOcr = mocr
+		self.mocr = mocr
 		self.img:cv2.typing.MatLike = img
 		self.__gray__:cv2.typing.MatLike = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY) if len(self.img.shape) > 2 else self.img
 		self.out:cv2.typing.MatLike = img.copy()
