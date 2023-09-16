@@ -11,9 +11,9 @@ from PIL import Image # type: ignore
 from lib.types.preset import Preset
 
 class Page:
-	def __init__(self, img:cv2.typing.MatLike, mocr, preset:Preset) -> None:
+	def __init__(self, img:cv2.typing.MatLike, mocr, preset:Preset) -> None: # type: ignore
 		self.preset:Preset = preset
-		self.mocr = mocr
+		self.mocr = mocr # type: ignore
 		self.img:cv2.typing.MatLike = img
 		self.__gray__:cv2.typing.MatLike = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY) if len(self.img.shape) > 2 else self.img
 		self.out:cv2.typing.MatLike = img.copy()
@@ -55,6 +55,7 @@ class Page:
 			area:float = cv2.contourArea(contours[c])
 			if not self.area*self.preset.conjectionMinContourArea < area < self.area*self.preset.conjectionMaxContourArea: continue
 			filtered.append(contours[c])
+		if len(filtered) < 1: return bbs
 		contourFeatures:list[list[int]] = []
 		for c in range(len(filtered)):
 			moments:cv2.typing.Moments = cv2.moments(filtered[c]) # type: ignore
@@ -74,7 +75,7 @@ class Page:
 			crds:list[list[int]] = [[i[e]+i[e-2] if e > 1 else i[e] for i in brs] for e in range(len(brs[0]))]
 			bubbleBounds:cv2.typing.Rect = [min(crds[0]), min(crds[1]), max(crds[2])-min(crds[0]), max(crds[3])-min(crds[1])]
 			if not self.area*self.preset.conjectionClusterMinArea < bubbleBounds[2]*bubbleBounds[3] < self.area*self.preset.conjectionClusterMaxArea: continue
-			bbs.append(Bubble(self.img, CropBox(*bubbleBounds,tolerance=self.preset.conjectionBubbleTolerance), self.mocr, preset=self.preset))
+			bbs.append(Bubble(self.img, CropBox(*bubbleBounds,tolerance=self.preset.conjectionBubbleTolerance), self.mocr, preset=self.preset)) # type: ignore
 		return bbs
 
 	def update(self, preset:Preset|None=None) -> None:

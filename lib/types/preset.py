@@ -1,3 +1,4 @@
+import pickle
 import typing
 
 class Preset:
@@ -18,3 +19,6 @@ class Preset:
 		self.conjectionClusterMinArea:float = 0.0003895
 		self.conjectionClusterMaxArea:float = 0.0389553
 		self.conjectionBubbleTolerance:int = 20 # only for the bubble borders
+
+	def save(self, path:str) -> None:
+		pickle.dump(self,open(path,"wb"))

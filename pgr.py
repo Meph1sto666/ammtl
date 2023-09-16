@@ -1,8 +1,17 @@
 import json
-from lib.types.bubble import Bubble # type: ignore
+import typing
+import numpy as np
+import cv2
+from lib.types.bubble import Bubble
 from lib.types.page import Page # type: ignore
+from lib.types.preset import Preset
 import tkinter as tk
 from PIL import ImageTk, Image
+import os
+import difflib
+from datetime import datetime as dt
+import cv2.typing
+import random
 
 class PagePreview:
 	def __init__(self, root:tk.Tk, page:str) -> None:
@@ -63,6 +72,61 @@ class PagePreview:
 		json.dump(self.savedCoords, open(f"./presets/traindata/{self.page.split('/')[-1].split('.')[0]}.json", "w", encoding="utf-8"))
 		
 
-root:tk.Tk = tk.Tk()
-pp = PagePreview(root, "./tests/007.jpg")
-root.mainloop()
+# root:tk.Tk = tk.Tk()
+# pp = PagePreview(root, "./tests/4.jpg")
+# root.mainloop()
+
+imgFile:str = "./tests/4.jpg"
+
+def testPresets():
+	preset:Preset = Preset()
+	p:Page = Page(cv2.imread(imgFile), None, preset)
+	cmbs:list[tuple[Preset, list[Bubble]]] = []
+	c:int = 0
+	last:dt = dt.now()
+	start:dt = dt.now()
+	for maskBlur in range(5, 9, 2):
+		preset.maskBlur = maskBlur
+		for maskThresh in range(50, 220, 10):
+			preset.maskThresh = maskThresh
+			for conjectionBlur in range(5,9,2):
+				preset.conjectionBlur = conjectionBlur
+				for conjectionThresh in range(50, 220, 10):
+					preset.conjectionThresh = conjectionThresh
+					p.update()
+					cmbs.append((preset.__dict__, [b.box.toTuple() for b in p.bubbles]))
+					c+=1
+					if c%50==0:
+						print(c, (dt.now()-last).total_seconds(), end=" / ")
+						last = dt.now()
+						json.dump(cmbs, open(f"./presets/traindata/found/{imgFile.split('/')[-1].split('.')[0]}_{c}.json","w"))
+						cmbs = []
+	if len(cmbs) >0:
+		json.dump(cmbs, open(f"./presets/traindata/found/{imgFile.split('/')[-1].split('.')[0]}_{c}.json","w"))
+	print(f"TOTAL: {(dt.now()-start).total_seconds()}")
+
+sample:list[list[int]] = json.load(open("./presets/traindata/4.json"))
+foundFolder:str = "./presets/traindata/found/"
+diffFolder:str = "./presets/traindata/diff/"
+groupedFolder:str = "./presets/traindata/grouped/"
+
+sortedSample:list[list[int]] = sorted(sample, key=lambda x: (x[0], x[1], x[2], x[3]))
+diffed:list[tuple[float, dict[str, int|float|str], list[tuple[int,int,int,int]]]] = []
+for file in list(filter(lambda x: x.endswith(".json"), os.listdir(foundFolder))):
+	found:list[tuple[dict[str, int|float|str],list[tuple[int,int,int,int]]]] = json.load(open(f"{foundFolder}{file}"))
+	for f in range(len(found)):
+		sortedFound:list[tuple[int, int, int, int]] = sorted(found[f][1], key=lambda x: (x[0], x[1], x[2], x[3]))
+		seq = difflib.SequenceMatcher(None, str(sample), str(sortedFound))
+		diffed.append((seq.ratio(), *found[f]))
+diffed = sorted(diffed, key=lambda x: x[0], reverse=True)
+json.dump(diffed, open(f"./presets/traindata/diffed/{imgFile.split('/')[-1].split('.')[0]}.json", "w"))
+
+img: cv2.typing.MatLike = cv2.imread(imgFile)
+for s in sample:
+	cv2.rectangle(img, pt1=(int(s[0]),int(s[1])), pt2=(int(s[2]), int(s[3])), color=(0,255,255), thickness=2)
+for d in diffed[0:]:
+	print(d[2])
+	color = (random.randint(1,256),random.randint(1,256),random.randint(1,256))
+	for c in d[2]:
+		cv2.rectangle(img, (c[0],c[1]), (c[2],c[3]), color, 1)
+Image.fromarray(img).show() # type: ignore
