@@ -19,8 +19,8 @@ for f in os.listdir("./tests/")[0:]:
 	# dStr = f"{colorama.Back.RESET+f.ljust(10)}{colorama.Back.RESET}: {(colorama.Fore.RESET+' / ').join([timeToColorPrec(diff[d])+str(d)+' ['+str(round(diff[d],2)).split('.')[0].rjust(4)+'.'+str(round(diff[d],2)).split('.')[1].ljust(2)+']' for d in diff])}"
 	# print(dStr)
 
-	# Image.fromarray(p.out).save(f"./out/{f}") # type: ignore
-	# Image.fromarray(p.mask).save(f"./out/mask_{f}") # type: ignore
+	Image.fromarray(p.out).save(f"./out/{f}") # type: ignore
+	Image.fromarray(p.mask).save(f"./out/mask_{f}") # type: ignore
 profiler.disable()
 profiler.dump_stats("./out/stats.dmp")
 

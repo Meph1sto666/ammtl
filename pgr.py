@@ -85,25 +85,30 @@ def testPresets():
 	c:int = 0
 	last:dt = dt.now()
 	start:dt = dt.now()
-	for maskBlur in range(5, 9, 2):
-		preset.maskBlur = maskBlur
-		for maskThresh in range(50, 220, 10):
-			preset.maskThresh = maskThresh
-			for conjectionBlur in range(5,9,2):
-				preset.conjectionBlur = conjectionBlur
-				for conjectionThresh in range(50, 220, 10):
-					preset.conjectionThresh = conjectionThresh
+	for maskThresh in range(230, 240, 1):
+		preset.maskThresh = maskThresh
+		for conjectionBlur in range(3,9,2):
+			preset.conjectionBlur = conjectionBlur
+			for conjectionThresh in range(200, 210, 1):
+				preset.conjectionThresh = conjectionThresh
+				for conjectionClusterEps in range(300, 400, 10):
+					preset.conjectionClusterEps = conjectionClusterEps/10000
 					p.update()
-					cmbs.append((preset.__dict__, [b.box.toTuple() for b in p.bubbles]))
+					coords = []
+					for b in p.bubbles:
+						box = b.box.toTuple()
+						coords.append((box[0], box[1], box[0]+box[2], box[1]+box[3]))
+					cmbs.append((preset.__dict__, coords))
 					c+=1
 					if c%50==0:
 						print(c, (dt.now()-last).total_seconds(), end=" / ")
 						last = dt.now()
 						json.dump(cmbs, open(f"./presets/traindata/found/{imgFile.split('/')[-1].split('.')[0]}_{c}.json","w"))
 						cmbs = []
-	if len(cmbs) >0:
+	if len(cmbs) > 0:
 		json.dump(cmbs, open(f"./presets/traindata/found/{imgFile.split('/')[-1].split('.')[0]}_{c}.json","w"))
 	print(f"TOTAL: {(dt.now()-start).total_seconds()}")
+# testPresets()
 
 sample:list[list[int]] = json.load(open("./presets/traindata/4.json"))
 foundFolder:str = "./presets/traindata/found/"
@@ -124,9 +129,9 @@ json.dump(diffed, open(f"./presets/traindata/diffed/{imgFile.split('/')[-1].spli
 img: cv2.typing.MatLike = cv2.imread(imgFile)
 for s in sample:
 	cv2.rectangle(img, pt1=(int(s[0]),int(s[1])), pt2=(int(s[2]), int(s[3])), color=(0,255,255), thickness=2)
-for d in diffed[0:]:
-	print(d[2])
+for d in diffed[0:1]:#[int(len(diffed)/2):int(len(diffed)/2)+1]:
+	# print(d[2])
 	color = (random.randint(1,256),random.randint(1,256),random.randint(1,256))
 	for c in d[2]:
-		cv2.rectangle(img, (c[0],c[1]), (c[2],c[3]), color, 1)
+		cv2.rectangle(img, (c[0],c[1]), (c[2],c[3]), color, 2)
 Image.fromarray(img).show() # type: ignore
