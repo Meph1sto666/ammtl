@@ -4,7 +4,7 @@ import typing
 class Preset:
 	def __init__(self) -> None:
 		self.maskBlur:int = 5 # 3-13 // try
-		self.maskThresh:int = 200 # 50-254 // try
+		self.maskThresh:int = 236 # 50-254 // try
 		self.maskMorph:tuple[int,int] = (7,7) # 3-13 // try
 		self.maskContourFilterMaxArea:float = .0058 # 0.002-0.01 // maybe try if not too much
 		self.conjectionBlur:int = 3 # 3-13 // try
