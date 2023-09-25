@@ -26,7 +26,7 @@ class Page:
 		# for b in range(len(self.bubbles)):
 		# 	Image.fromarray(self.bubbles[b].img).save(f"./out/b/{f}_{b}.jpg")
 		# 	b.translate()
-		# self.out = self.drawTextBounds(self.out)
+		self.out = self.drawTextBounds(self.out)
 
 	def createMask(self) -> cv2.typing.MatLike:
 		blurred:cv2.typing.MatLike = cv2.medianBlur(self.__gray__, self.preset.maskBlur)
@@ -34,31 +34,34 @@ class Page:
 		morphed:cv2.typing.MatLike = cv2.morphologyEx(threshed, cv2.MORPH_RECT, cv2.getStructuringElement(cv2.MORPH_RECT,self.preset.maskMorph)) # // (9,9) < -> less thick > -> thicker
 		contours:list[cv2.typing.MatLike] = cv2.findContours(morphed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
 		meanS:float = cv2.mean(morphed, mask=cv2.bitwise_not(morphed))[0]
-		filteredContours:list[cv2.typing.MatLike] = [contour for contour in contours if cv2.contourArea(contour) > self.preset.maskContourFilterMaxArea*self.area and meanS == 0]
+		filteredContours:list[cv2.typing.MatLike] = [contour
+            for contour in contours
+            if (
+            	cv2.contourArea(contour) > self.preset.maskContourFilterMaxArea*self.area
+            ) and meanS == 0
+        ]
 		mask:cv2.typing.MatLike = np.zeros_like(morphed)
 		cv2.drawContours(mask, filteredContours, -1, 1, thickness=cv2.FILLED) # type: ignore
 		morphed = cv2.bitwise_not(morphed) # type: ignore
 		masked: cv2.typing.MatLike = cv2.bitwise_and(morphed, morphed, mask=mask)
-		# blurred2:cv2.typing.MatLike = cv2.stackBlur(masked, (9,9))
-
-		blurred2 = cv2.erode(masked, cv2.getStructuringElement(cv2.MORPH_RECT,(3,3)), iterations=1)
-		return blurred2
+		# blurred2 = cv2.erode(masked, cv2.getStructuringElement(cv2.MORPH_RECT,(3,3)), iterations=1)
+		return masked
 
 	def conjectBubbles(self) -> list[Bubble]:
 		bbs:list[Bubble] = []
-		gray:cv2.typing.MatLike = self.__gray__
-		gray = cv2.bitwise_and(gray, self.mask)
-		blurred:cv2.typing.MatLike = cv2.medianBlur(gray, self.preset.conjectionBlur)
-		threshed:cv2.typing.MatLike = cv2.threshold(blurred, self.preset.conjectionThresh, 255, cv2.THRESH_BINARY)[1]
-		contours:list[cv2.typing.MatLike] = cv2.findContours(threshed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
-		filtered:list[cv2.typing.MatLike] = []
-		for c in range(len(contours)):
-			if len(contours[c]) <= self.preset.conjectionMinContourLen: continue
-			perimeter:float = cv2.arcLength(contours[c], True)
-			if perimeter > self.img.shape[1]*self.preset.conjectionMaxContourPermitter: continue
-			area:float = cv2.contourArea(contours[c])
-			if not self.area*self.preset.conjectionMinContourArea < area < self.area*self.preset.conjectionMaxContourArea: continue
-			filtered.append(contours[c])
+		# gray:cv2.typing.MatLike = self.__gray__
+		# gray = cv2.bitwise_and(gray, self.mask)
+		# threshed:cv2.typing.MatLike = cv2.threshold(gray, self.preset.conjectionThresh, 255, cv2.THRESH_BINARY)[1]
+		contours:list[cv2.typing.MatLike] = cv2.findContours(self.mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0] # type: ignore
+		# filtered:list[cv2.typing.MatLike] = []
+		# for c in range(len(contours)):
+		# 	if len(contours[c]) <= self.preset.conjectionMinContourLen: continue
+		# 	perimeter:float = cv2.arcLength(contours[c], True)
+		# 	if perimeter > self.img.shape[1]*self.preset.conjectionMaxContourPermitter: continue
+		# 	area:float = cv2.contourArea(contours[c])
+		# 	if not self.area*self.preset.conjectionMinContourArea < area < self.area*self.preset.conjectionMaxContourArea: continue
+		# 	filtered.append(contours[c])
+		filtered = contours
 		if len(filtered) < 1: return bbs
 		contourFeatures:list[list[int]] = []
 		for c in range(len(filtered)):
@@ -73,8 +76,9 @@ class Page:
 			clusterI = np.where(labels==l)[0] # type: ignore
 			ccf:list[int] = [contourFeatures[i][0] for i in clusterI]
 			clustered:list[cv2.typing.MatLike] = [filtered[i] for i in ccf]
+			# color = (random.randint(0,256),random.randint(0,256),random.randint(0,256))
 			# for c in clustered:
-			# 	cv2.drawContours(self.out, [c], -1, color=(255,0,255), thickness=2)
+			# 	cv2.drawContours(self.out, [c], -1, color=color, thickness=2)
 			brs:list[cv2.typing.Rect] = [cv2.boundingRect(c) for c in clustered]
 			crds:list[list[int]] = [[i[e]+i[e-2] if e > 1 else i[e] for i in brs] for e in range(len(brs[0]))]
 			bubbleBounds:cv2.typing.Rect = [min(crds[0]), min(crds[1]), max(crds[2])-min(crds[0]), max(crds[3])-min(crds[1])]
